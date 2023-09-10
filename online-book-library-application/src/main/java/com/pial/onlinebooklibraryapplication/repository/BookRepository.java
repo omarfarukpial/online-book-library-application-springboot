@@ -6,9 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BookRepository extends JpaRepository<BookEntity, Long> {
 
-    void deleteByBookId(String bookId);
+    void deleteByBookId(Long bookId);
 
-    boolean existsByBookId(String bookId);
+    boolean existsByBookId(Long bookId);
 
-    BookEntity findByBookId(String bookId);
+    BookEntity findByBookId(Long bookId);
 }

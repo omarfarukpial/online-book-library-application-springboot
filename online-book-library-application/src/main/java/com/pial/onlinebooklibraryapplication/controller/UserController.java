@@ -4,6 +4,7 @@ package com.pial.onlinebooklibraryapplication.controller;
 import com.pial.onlinebooklibraryapplication.constants.AppConstants;
 import com.pial.onlinebooklibraryapplication.dto.UserDto;
 import com.pial.onlinebooklibraryapplication.dto.UserLoginRequestModel;
+import com.pial.onlinebooklibraryapplication.entity.BookEntity;
 import com.pial.onlinebooklibraryapplication.service.implementation.UserServiceImplementation;
 import com.pial.onlinebooklibraryapplication.utils.JWTUtils;
 import jakarta.servlet.http.HttpServletResponse;
@@ -30,7 +31,7 @@ public class UserController {
     private AuthenticationManager authenticationManager;
 
     @GetMapping("/users/{userId}")
-    public ResponseEntity<?> userDetailsByUserId(@PathVariable String userId) {
+    public ResponseEntity<?> userDetailsByUserId(@PathVariable Long userId) {
         try {
             UserDto user = userServiceImplementation.getUserByUserId(userId);
             return new ResponseEntity<>(user, HttpStatus.OK);
@@ -75,5 +76,7 @@ public class UserController {
 
         }
     }
+
+
 
 }

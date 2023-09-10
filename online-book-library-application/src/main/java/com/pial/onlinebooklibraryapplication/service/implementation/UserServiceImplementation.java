@@ -42,8 +42,6 @@ public class UserServiceImplementation implements UserService, UserDetailsServic
         userEntity.setAddress(user.getAddress());
         userEntity.setEmail(user.getEmail());
         userEntity.setPassword(bCryptPasswordEncoder.encode(user.getPassword()));
-        String publicUserId = JWTUtils.generateUserID(10);
-        userEntity.setUserId(publicUserId);
         userEntity.setRole(user.getRole());
         UserEntity storedUserDetails = userRepository.save(userEntity);
         UserDto returnedValue = modelMapper.map(storedUserDetails,UserDto.class);
@@ -65,9 +63,9 @@ public class UserServiceImplementation implements UserService, UserDetailsServic
     }
 
     @Override
-    public UserDto getUserByUserId(String userId) throws Exception {
+    public UserDto getUserByUserId(Long userId) throws Exception {
         UserDto returnValue = new UserDto();
-        UserEntity userEntity = userRepository.findByUserId(userId).orElseThrow(Exception::new);
+        UserEntity userEntity = userRepository.findByUserId(userId);
         BeanUtils.copyProperties(userEntity,returnValue);
         return returnValue;
     }

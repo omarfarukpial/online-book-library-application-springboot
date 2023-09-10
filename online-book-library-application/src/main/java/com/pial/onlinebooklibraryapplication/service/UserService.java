@@ -5,5 +5,5 @@ import com.pial.onlinebooklibraryapplication.dto.UserDto;
 public interface UserService {
     UserDto createUser(UserDto userDto) throws Exception;
     UserDto getUser(String email);
-    UserDto getUserByUserId(String id) throws Exception;
+    UserDto getUserByUserId(Long id) throws Exception;
 }
