@@ -76,6 +76,7 @@ public class BookBorrowingServiceImplementation implements BookBorrowingService 
         bookBorrowingEntity.setReturnDate(LocalDate.now());
         bookEntity.setStatus("AVAILABLE");
 
+
         BookBorrowingEntity storeReturnDetails = bookBorrowRepository.save(bookBorrowingEntity);
 
         return modelMapper.map(storeReturnDetails, BookBorrowingDto.class);

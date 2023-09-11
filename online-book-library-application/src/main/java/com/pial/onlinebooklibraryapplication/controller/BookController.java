@@ -1,13 +1,12 @@
 package com.pial.onlinebooklibraryapplication.controller;
 
 
-import com.pial.onlinebooklibraryapplication.dto.BookBorrowingDto;
-import com.pial.onlinebooklibraryapplication.dto.BookBorrowingInfoDto;
-import com.pial.onlinebooklibraryapplication.dto.BookDto;
-import com.pial.onlinebooklibraryapplication.dto.BookReviewDto;
+import com.pial.onlinebooklibraryapplication.dto.*;
 import com.pial.onlinebooklibraryapplication.entity.BookBorrowingEntity;
 import com.pial.onlinebooklibraryapplication.entity.BookEntity;
+import com.pial.onlinebooklibraryapplication.service.BookReserveService;
 import com.pial.onlinebooklibraryapplication.service.implementation.BookBorrowingServiceImplementation;
+import com.pial.onlinebooklibraryapplication.service.implementation.BookReserveServiceImplementation;
 import com.pial.onlinebooklibraryapplication.service.implementation.BookReviewServiceImplementation;
 import com.pial.onlinebooklibraryapplication.service.implementation.BookServiceImplementation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +27,9 @@ public class BookController {
 
     @Autowired
     private BookReviewServiceImplementation bookReviewServiceImplementation;
+
+    @Autowired
+    private BookReserveServiceImplementation bookReserveServiceImplementation;
 
 
     @PostMapping ("/books/create")
@@ -164,6 +166,30 @@ public class BookController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
+
+
+    @PostMapping("/books/{bookId}/reserve")
+    public ResponseEntity<?> reserveBook (@PathVariable Long bookId) {
+        try {
+            BookReserveDto updatedReview =  bookReserveServiceImplementation.reserveBook(bookId);
+            return new  ResponseEntity<>(updatedReview, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("/books/{bookId}/cancel-reservation")
+    public ResponseEntity<?> cancelReserveBook (@PathVariable Long bookId) {
+        try {
+            BookReserveDto cancelReview =  bookReserveServiceImplementation.cancelReserveBook(bookId);
+            return new  ResponseEntity<>(cancelReview, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+
+
 
 
 
