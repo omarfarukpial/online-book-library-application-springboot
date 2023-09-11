@@ -43,19 +43,12 @@ public class BookBorrowingServiceImplementation implements BookBorrowingService 
     @Autowired
     private BookReserveRepository bookReserveRepository;
 
-
-    private Long getCurrentUserId() {
+    public BookBorrowingDto bookBorrowing(Long bookId) throws Exception {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
-        return user.get().getUserId();
-    }
+        Long userId = user.get().getUserId();
 
-    public BookBorrowingDto bookBorrowing(Long bookId) throws Exception {
-//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//        Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
-//        Long userId = user.get().getUserId();
-
-        UserEntity userEntity = userRepository.findByUserId(getCurrentUserId());
+        UserEntity userEntity = userRepository.findByUserId(userId);
         BookEntity bookEntity = bookRepository.findByBookId(bookId);
 
         if (Objects.equals(bookEntity.getStatus(), "BORROWED")) throw new Exception("Currently unavailable, but you can reserve this book!");
@@ -76,11 +69,11 @@ public class BookBorrowingServiceImplementation implements BookBorrowingService 
 
 
     public BookBorrowingDto bookReturning(Long bookId) throws Exception{
-//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//        Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
-//        Long userId = user.get().getUserId();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
+        Long userId = user.get().getUserId();
 
-        UserEntity userEntity = userRepository.findByUserId(getCurrentUserId());
+        UserEntity userEntity = userRepository.findByUserId(userId);
         BookEntity bookEntity = bookRepository.findByBookId(bookId);
 
         BookBorrowingEntity bookBorrowingEntity = bookBorrowRepository.findByUserEntityAndBookEntityAndReturnDateIsNull(userEntity,bookEntity);
