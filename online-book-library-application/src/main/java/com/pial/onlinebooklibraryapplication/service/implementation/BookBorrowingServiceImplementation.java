@@ -7,9 +7,11 @@ import com.pial.onlinebooklibraryapplication.dto.BookDto;
 import com.pial.onlinebooklibraryapplication.dto.UserDto;
 import com.pial.onlinebooklibraryapplication.entity.BookBorrowingEntity;
 import com.pial.onlinebooklibraryapplication.entity.BookEntity;
+import com.pial.onlinebooklibraryapplication.entity.BookReserveEntity;
 import com.pial.onlinebooklibraryapplication.entity.UserEntity;
 import com.pial.onlinebooklibraryapplication.repository.BookBorrowRepository;
 import com.pial.onlinebooklibraryapplication.repository.BookRepository;
+import com.pial.onlinebooklibraryapplication.repository.BookReserveRepository;
 import com.pial.onlinebooklibraryapplication.repository.UserRepository;
 import com.pial.onlinebooklibraryapplication.service.BookBorrowingService;
 import jakarta.transaction.Transactional;
@@ -38,12 +40,22 @@ public class BookBorrowingServiceImplementation implements BookBorrowingService 
     @Autowired
     private BookBorrowRepository bookBorrowRepository;
 
-    public BookBorrowingDto bookBorrowing(Long bookId) throws Exception {
+    @Autowired
+    private BookReserveRepository bookReserveRepository;
+
+
+    private Long getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
-        Long userId = user.get().getUserId();
+        return user.get().getUserId();
+    }
 
-        UserEntity userEntity = userRepository.findByUserId(userId);
+    public BookBorrowingDto bookBorrowing(Long bookId) throws Exception {
+//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//        Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
+//        Long userId = user.get().getUserId();
+
+        UserEntity userEntity = userRepository.findByUserId(getCurrentUserId());
         BookEntity bookEntity = bookRepository.findByBookId(bookId);
 
         if (Objects.equals(bookEntity.getStatus(), "BORROWED")) throw new Exception("Currently unavailable, but you can reserve this book!");
@@ -64,11 +76,11 @@ public class BookBorrowingServiceImplementation implements BookBorrowingService 
 
 
     public BookBorrowingDto bookReturning(Long bookId) throws Exception{
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
-        Long userId = user.get().getUserId();
+//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//        Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
+//        Long userId = user.get().getUserId();
 
-        UserEntity userEntity = userRepository.findByUserId(userId);
+        UserEntity userEntity = userRepository.findByUserId(getCurrentUserId());
         BookEntity bookEntity = bookRepository.findByBookId(bookId);
 
         BookBorrowingEntity bookBorrowingEntity = bookBorrowRepository.findByUserEntityAndBookEntityAndReturnDateIsNull(userEntity,bookEntity);
@@ -76,11 +88,15 @@ public class BookBorrowingServiceImplementation implements BookBorrowingService 
         bookBorrowingEntity.setReturnDate(LocalDate.now());
         bookEntity.setStatus("AVAILABLE");
 
+        List<BookReserveEntity> bookReserveEntity = bookReserveRepository.findAllByBookEntity(bookEntity);
+        if(!bookReserveEntity.isEmpty()) {
+            for (BookReserveEntity reserveEntity : bookReserveEntity) {
+                reserveEntity.setStatus("DONE");
+            }
+        }
 
         BookBorrowingEntity storeReturnDetails = bookBorrowRepository.save(bookBorrowingEntity);
-
         return modelMapper.map(storeReturnDetails, BookBorrowingDto.class);
-
     }
 
     public List<BookEntity> getAllBookByUser(Long userId) throws Exception{
@@ -144,6 +160,9 @@ public class BookBorrowingServiceImplementation implements BookBorrowingService 
                 .collect(Collectors.toList());
         return bookBorrowingInfoList;
     }
+
+
+
 
 
 

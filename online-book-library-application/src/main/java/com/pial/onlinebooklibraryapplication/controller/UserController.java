@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -55,24 +56,22 @@ public class UserController {
     }
 
     @PostMapping("/user/login")
-    public ResponseEntity<?> login(@RequestBody UserLoginRequestModel userLoginReqModel, HttpServletResponse response) throws IOException {
+    public ResponseEntity<?> login(@RequestBody UserLoginRequestModel userLoginReqModel, HttpServletResponse response) {
         try {
             Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(userLoginReqModel.getEmail(), userLoginReqModel.getPassword()));
-            if (authentication.isAuthenticated()) {
-                UserDto userDto = userServiceImplementation.getUser(userLoginReqModel.getEmail());
-                String accessToken = JWTUtils.generateToken(userDto.getEmail());
 
-                Map<String, Object> loginResponse = new HashMap<>();
-                loginResponse.put("userId", userDto.getUserId());
-                loginResponse.put("email", userDto.getEmail());
-                loginResponse.put(AppConstants.HEADER_STRING, AppConstants.TOKEN_PREFIX + accessToken);
-                return ResponseEntity.status(HttpStatus.OK).body(loginResponse);
+            UserDto userDto = userServiceImplementation.getUser(userLoginReqModel.getEmail());
+            String accessToken = JWTUtils.generateToken(userDto.getEmail());
 
-            } else {
-                return new ResponseEntity<>("Invalid email or password!", HttpStatus.UNAUTHORIZED);
-            }
-        } catch (UsernameNotFoundException e) {
-            return new ResponseEntity<>("Username not found!", HttpStatus.UNAUTHORIZED);
+            Map<String, Object> loginResponse = new HashMap<>();
+            loginResponse.put("userId", userDto.getUserId());
+            loginResponse.put("email", userDto.getEmail());
+            loginResponse.put(AppConstants.HEADER_STRING, AppConstants.TOKEN_PREFIX + accessToken);
+            return ResponseEntity.status(HttpStatus.OK).body(loginResponse);
+
+        }
+        catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.UNAUTHORIZED);
 
         }
     }
