@@ -3,6 +3,8 @@ package com.pial.onlinebooklibraryapplication.service.implementation;
 import com.pial.onlinebooklibraryapplication.constants.AppConstants;
 import com.pial.onlinebooklibraryapplication.dto.UserDto;
 import com.pial.onlinebooklibraryapplication.entity.UserEntity;
+import com.pial.onlinebooklibraryapplication.exception.EmailAlreadyExistsException;
+import com.pial.onlinebooklibraryapplication.exception.UserIdNotFoundException;
 import com.pial.onlinebooklibraryapplication.repository.UserRepository;
 import com.pial.onlinebooklibraryapplication.service.UserService;
 import com.pial.onlinebooklibraryapplication.utils.JWTUtils;
@@ -31,9 +33,9 @@ public class UserServiceImplementation implements UserService, UserDetailsServic
 
 
     @Override
-    public UserDto createUser(UserDto user) throws Exception {
+    public UserDto createUser(UserDto user) throws EmailAlreadyExistsException {
         if(userRepository.findByEmail(user.getEmail()).isPresent())
-            throw new Exception("User already exists");
+            throw new EmailAlreadyExistsException("Email already exists!");
 
         ModelMapper modelMapper = new ModelMapper();
         UserEntity userEntity = new UserEntity();
@@ -63,9 +65,10 @@ public class UserServiceImplementation implements UserService, UserDetailsServic
     }
 
     @Override
-    public UserDto getUserByUserId(Long userId) throws Exception {
+    public UserDto getUserByUserId(Long userId) throws UserIdNotFoundException {
         UserDto returnValue = new UserDto();
         UserEntity userEntity = userRepository.findByUserId(userId);
+        if (userEntity == null) throw new UserIdNotFoundException("User Id does not exists!");
         BeanUtils.copyProperties(userEntity,returnValue);
         return returnValue;
     }

@@ -65,7 +65,7 @@ public class BookController {
     @GetMapping("/books/all")
     public ResponseEntity<?> allBooks() {
         try {
-            List <BookEntity> allBook = bookServiceImplementation.getAllBook();
+            List <BookDto> allBook = bookServiceImplementation.getAllBook();
             return new  ResponseEntity<>(allBook, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);

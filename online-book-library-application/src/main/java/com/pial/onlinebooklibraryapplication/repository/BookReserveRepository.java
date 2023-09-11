@@ -9,5 +9,5 @@ import java.util.List;
 public interface BookReserveRepository extends JpaRepository<BookReserveEntity, Long> {
     BookReserveEntity findByBookEntity(BookEntity bookEntity);
 
-    List<BookReserveEntity> findAllByBookEntity(BookEntity bookEntity);
+    List<BookReserveEntity> findAllByBookEntityAndDeletedFalse(BookEntity bookEntity);
 }

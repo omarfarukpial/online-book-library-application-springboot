@@ -9,6 +9,10 @@ import com.pial.onlinebooklibraryapplication.entity.BookBorrowingEntity;
 import com.pial.onlinebooklibraryapplication.entity.BookEntity;
 import com.pial.onlinebooklibraryapplication.entity.BookReserveEntity;
 import com.pial.onlinebooklibraryapplication.entity.UserEntity;
+import com.pial.onlinebooklibraryapplication.exception.BookIdNotFoundException;
+import com.pial.onlinebooklibraryapplication.exception.BookNotBorrowedException;
+import com.pial.onlinebooklibraryapplication.exception.NotAuthorizedException;
+import com.pial.onlinebooklibraryapplication.exception.UserIdNotFoundException;
 import com.pial.onlinebooklibraryapplication.repository.BookBorrowRepository;
 import com.pial.onlinebooklibraryapplication.repository.BookRepository;
 import com.pial.onlinebooklibraryapplication.repository.BookReserveRepository;
@@ -51,6 +55,7 @@ public class BookBorrowingServiceImplementation implements BookBorrowingService 
         UserEntity userEntity = userRepository.findByUserId(userId);
         BookEntity bookEntity = bookRepository.findByBookId(bookId);
 
+        if (bookEntity == null || bookEntity.isDeleted()) throw new BookIdNotFoundException("Book does not exits!");
         if (Objects.equals(bookEntity.getStatus(), "BORROWED")) throw new Exception("Currently unavailable, but you can reserve this book!");
 
         ModelMapper modelMapper = new ModelMapper();
@@ -76,12 +81,15 @@ public class BookBorrowingServiceImplementation implements BookBorrowingService 
         UserEntity userEntity = userRepository.findByUserId(userId);
         BookEntity bookEntity = bookRepository.findByBookId(bookId);
 
+        if (bookEntity == null || bookEntity.isDeleted()) throw new BookIdNotFoundException("Book does not exits!");
+
         BookBorrowingEntity bookBorrowingEntity = bookBorrowRepository.findByUserEntityAndBookEntityAndReturnDateIsNull(userEntity,bookEntity);
+        if (bookBorrowingEntity == null) throw new BookNotBorrowedException("You did not currently borrowing this book!");
         ModelMapper modelMapper = new ModelMapper();
         bookBorrowingEntity.setReturnDate(LocalDate.now());
         bookEntity.setStatus("AVAILABLE");
 
-        List<BookReserveEntity> bookReserveEntity = bookReserveRepository.findAllByBookEntity(bookEntity);
+        List<BookReserveEntity> bookReserveEntity = bookReserveRepository.findAllByBookEntityAndDeletedFalse(bookEntity);
         if(!bookReserveEntity.isEmpty()) {
             for (BookReserveEntity reserveEntity : bookReserveEntity) {
                 reserveEntity.setStatus("DONE");
@@ -92,15 +100,16 @@ public class BookBorrowingServiceImplementation implements BookBorrowingService 
         return modelMapper.map(storeReturnDetails, BookBorrowingDto.class);
     }
 
-    public List<BookEntity> getAllBookByUser(Long userId) throws Exception{
+    public List<BookEntity> getAllBookByUser(Long userId) throws NotAuthorizedException, UserIdNotFoundException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
         String currentUserRole = user.get().getRole();
         Long currentUserId = user.get().getUserId();
         if (!currentUserId.equals(userId) && currentUserRole.equals("CUSTOMER")) {
-            throw new Exception("You are not authorized to access this!");
+            throw new NotAuthorizedException("You are not authorized to access this!");
         }
         UserEntity userEntity = userRepository.findByUserId(userId);
+        if (userEntity == null) throw new UserIdNotFoundException("User Id does not exists!");
         List<BookBorrowingEntity> bookBorrowings = bookBorrowRepository.findAllByUserEntity(userEntity);
 
         List<BookEntity> books = bookBorrowings.stream()
@@ -111,15 +120,17 @@ public class BookBorrowingServiceImplementation implements BookBorrowingService 
 
     }
 
-    public List<BookEntity> getAllBorrowedBookByUser(Long userId) throws Exception {
+    public List<BookEntity> getAllBorrowedBookByUser(Long userId) throws NotAuthorizedException,UserIdNotFoundException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
         String currentUserRole = user.get().getRole();
         Long currentUserId = user.get().getUserId();
         if (!currentUserId.equals(userId) && currentUserRole.equals("CUSTOMER")) {
-            throw new Exception("You are not authorized to access this!");
+            throw new NotAuthorizedException("You are not authorized to access this!");
         }
         UserEntity userEntity = userRepository.findByUserId(userId);
+        if (userEntity == null) throw new UserIdNotFoundException("User Id does not exists!");
+
         List<BookBorrowingEntity> bookBorrowings = bookBorrowRepository.findAllByUserEntityAndReturnDateIsNull(userEntity);
 
         List<BookEntity> books = bookBorrowings.stream()

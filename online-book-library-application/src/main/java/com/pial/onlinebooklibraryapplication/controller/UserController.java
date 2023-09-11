@@ -58,20 +58,20 @@ public class UserController {
     @PostMapping("/user/login")
     public ResponseEntity<?> login(@RequestBody UserLoginRequestModel userLoginReqModel, HttpServletResponse response) {
         try {
-            Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(userLoginReqModel.getEmail(), userLoginReqModel.getPassword()));
-
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(userLoginReqModel.getEmail(), userLoginReqModel.getPassword()));
             UserDto userDto = userServiceImplementation.getUser(userLoginReqModel.getEmail());
             String accessToken = JWTUtils.generateToken(userDto.getEmail());
-
             Map<String, Object> loginResponse = new HashMap<>();
             loginResponse.put("userId", userDto.getUserId());
             loginResponse.put("email", userDto.getEmail());
             loginResponse.put(AppConstants.HEADER_STRING, AppConstants.TOKEN_PREFIX + accessToken);
             return ResponseEntity.status(HttpStatus.OK).body(loginResponse);
 
+        } catch (BadCredentialsException e) {
+            return new ResponseEntity<>("Wrong password!", HttpStatus.UNAUTHORIZED);
         }
         catch (Exception e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>("Wrong Email or other exception!", HttpStatus.UNAUTHORIZED);
 
         }
     }

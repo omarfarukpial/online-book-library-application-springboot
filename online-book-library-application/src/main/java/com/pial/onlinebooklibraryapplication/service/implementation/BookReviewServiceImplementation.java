@@ -95,8 +95,6 @@ public class BookReviewServiceImplementation implements BookReviewService {
 
         bookReviewRepository.delete(bookReview);
 
-
-
     }
 
     public BookReviewDto updateReview(Long bookId, Long reviewId, BookReviewDto bookReviewDto) throws Exception {
