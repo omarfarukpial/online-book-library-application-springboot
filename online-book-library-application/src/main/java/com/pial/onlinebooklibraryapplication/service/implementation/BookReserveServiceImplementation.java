@@ -7,6 +7,8 @@ import com.pial.onlinebooklibraryapplication.entity.BookBorrowingEntity;
 import com.pial.onlinebooklibraryapplication.entity.BookEntity;
 import com.pial.onlinebooklibraryapplication.entity.BookReserveEntity;
 import com.pial.onlinebooklibraryapplication.entity.UserEntity;
+import com.pial.onlinebooklibraryapplication.exception.*;
+import com.pial.onlinebooklibraryapplication.repository.BookBorrowRepository;
 import com.pial.onlinebooklibraryapplication.repository.BookRepository;
 import com.pial.onlinebooklibraryapplication.repository.BookReserveRepository;
 import com.pial.onlinebooklibraryapplication.repository.UserRepository;
@@ -35,7 +37,10 @@ public class BookReserveServiceImplementation implements BookReserveService {
     @Autowired
     private BookReserveRepository bookReserveRepository;
 
-    public BookReserveDto reserveBook(Long bookId) throws Exception {
+    @Autowired
+    private BookBorrowRepository bookBorrowRepository;
+
+    public BookReserveDto reserveBook(Long bookId) throws Exception{
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
         Long userId = user.get().getUserId();
@@ -43,8 +48,14 @@ public class BookReserveServiceImplementation implements BookReserveService {
         UserEntity userEntity = userRepository.findByUserId(userId);
         BookEntity bookEntity = bookRepository.findByBookId(bookId);
 
-        if (Objects.equals(bookEntity.getStatus(), "AVAILABLE")) throw new Exception("This book is already available, you can borrow this!");
+        if (bookEntity == null || bookEntity.isDeleted()) throw new BookIdNotFoundException("Book does not exits!");
+        if (Objects.equals(bookEntity.getStatus(), "AVAILABLE")) throw new BookAlreadyExistsException("This book is already available, you can borrow this!");
 
+        BookReserveEntity bookReserveCheckEntity = bookReserveRepository.findByUserEntityAndBookEntityAndStatus(userEntity,bookEntity, "PENDING");
+        if (bookReserveCheckEntity != null) throw new BookReservedBeforeException("You already reserved the book before!");
+
+        BookBorrowingEntity bookBorrowingCheckEntity = bookBorrowRepository.findByUserEntityAndBookEntityAndReturnDateIsNull(userEntity, bookEntity);
+        if (bookBorrowingCheckEntity != null) throw new BookNotBorrowedException("The book is borrowed by you, so you can not reserve it now!");
 
         ModelMapper modelMapper = new ModelMapper();
         BookReserveEntity bookReserveEntity = new BookReserveEntity();
@@ -67,11 +78,12 @@ public class BookReserveServiceImplementation implements BookReserveService {
         UserEntity userEntity = userRepository.findByUserId(userId);
         BookEntity bookEntity = bookRepository.findByBookId(bookId);
 
+        if (bookEntity == null || bookEntity.isDeleted()) throw new BookIdNotFoundException("Book does not exits!");
+
         ModelMapper modelMapper = new ModelMapper();
-        BookReserveEntity bookCancelReserveEntity = bookReserveRepository.findByBookEntity(bookEntity);
-
-        if (bookCancelReserveEntity.getUserEntity() != userEntity) throw new Exception("You are not authorized to cancel reservation!");
-
+        BookReserveEntity bookCancelReserveEntity = bookReserveRepository.findByUserEntityAndBookEntityAndStatus(userEntity, bookEntity, "PENDING");
+        
+        if (bookCancelReserveEntity == null) throw new BookNotReservedException("No reservation found for this book and user!");
 
         bookCancelReserveEntity.setStatus("CANCEL");
 

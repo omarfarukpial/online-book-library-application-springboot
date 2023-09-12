@@ -71,7 +71,7 @@ public class UserController {
             return new ResponseEntity<>("Wrong password!", HttpStatus.UNAUTHORIZED);
         }
         catch (Exception e) {
-            return new ResponseEntity<>("Wrong Email or other exception!", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>("Wrong Email!", HttpStatus.UNAUTHORIZED);
 
         }
     }

@@ -89,7 +89,7 @@ public class BookBorrowingServiceImplementation implements BookBorrowingService 
         bookBorrowingEntity.setReturnDate(LocalDate.now());
         bookEntity.setStatus("AVAILABLE");
 
-        List<BookReserveEntity> bookReserveEntity = bookReserveRepository.findAllByBookEntityAndDeletedFalse(bookEntity);
+        List<BookReserveEntity> bookReserveEntity = bookReserveRepository.findAllByBookEntityAndStatus(bookEntity,"PENDING");
         if(!bookReserveEntity.isEmpty()) {
             for (BookReserveEntity reserveEntity : bookReserveEntity) {
                 reserveEntity.setStatus("DONE");
@@ -146,12 +146,14 @@ public class BookBorrowingServiceImplementation implements BookBorrowingService 
         Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
         String currentUserRole = user.get().getRole();
         Long currentUserId = user.get().getUserId();
+        UserEntity checkUser = userRepository.findByUserId(userId);
+        if (checkUser == null) throw new UserIdNotFoundException("User id does not exists!");
         if (!currentUserId.equals(userId) && currentUserRole.equals("CUSTOMER")) {
-            throw new Exception("You are not authorized to access this!");
+            throw new NotAuthorizedException("You are not authorized to access this!");
         }
         UserEntity userEntity = userRepository.findByUserId(userId);
         List<BookBorrowingEntity> bookBorrowings = bookBorrowRepository.findAllByUserEntity(userEntity);
-
+        if (bookBorrowings.isEmpty()) throw new BookNotBorrowedException("No book borrowed by this user!");
         List<BookBorrowingInfoDto> bookBorrowingInfoList = bookBorrowings.stream()
                 .map(bookBorrowingEntity -> BookBorrowingInfoDto.builder()
                         .borrowId(bookBorrowingEntity.getBorrowId())

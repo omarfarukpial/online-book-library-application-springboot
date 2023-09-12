@@ -33,6 +33,11 @@ public class GlobalExceptionHandler {
         return MESSAGE;
     }
 
+    @ExceptionHandler({BookReservedBeforeException.class})
+    public String handleBookReservedBeforeException(String MESSAGE) {
+        return MESSAGE;
+    }
+
     @ExceptionHandler({BookUnavailableException.class})
     public String handleBookUnavailableException(String MESSAGE) {
         return MESSAGE;
@@ -42,9 +47,17 @@ public class GlobalExceptionHandler {
     public String handleEmailAlreadyExistsException(String MESSAGE) {
         return MESSAGE;
     }
+    @ExceptionHandler({FormException.class})
+    public String handleFormException(String MESSAGE) {
+        return MESSAGE;
+    }
 
     @ExceptionHandler({NotAuthorizedException.class})
     public String handleNotAuthorizedException(String MESSAGE) {
+        return MESSAGE;
+    }
+    @ExceptionHandler({ReviewAlreadyExists.class})
+    public String handleReviewAlreadyExists(String MESSAGE) {
         return MESSAGE;
     }
 

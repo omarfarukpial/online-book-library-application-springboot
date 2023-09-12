@@ -6,6 +6,10 @@ import com.pial.onlinebooklibraryapplication.entity.BookBorrowingEntity;
 import com.pial.onlinebooklibraryapplication.entity.BookEntity;
 import com.pial.onlinebooklibraryapplication.entity.BookReviewEntity;
 import com.pial.onlinebooklibraryapplication.entity.UserEntity;
+import com.pial.onlinebooklibraryapplication.exception.BookIdNotFoundException;
+import com.pial.onlinebooklibraryapplication.exception.NotAuthorizedException;
+import com.pial.onlinebooklibraryapplication.exception.ReviewAlreadyExists;
+import com.pial.onlinebooklibraryapplication.exception.ReviewIdNotFoundException;
 import com.pial.onlinebooklibraryapplication.repository.BookRepository;
 import com.pial.onlinebooklibraryapplication.repository.BookReviewRepository;
 import com.pial.onlinebooklibraryapplication.repository.UserRepository;
@@ -46,8 +50,13 @@ public class BookReviewServiceImplementation implements BookReviewService {
         UserEntity userEntity = userRepository.findByUserId(userId);
         BookEntity bookEntity = bookRepository.findByBookId(bookId);
 
+        if (bookEntity == null || bookEntity.isDeleted()) throw new BookIdNotFoundException("Book does not exits!");
 
         ModelMapper modelMapper = new ModelMapper();
+
+        BookReviewEntity bookReviewCheckEntity = bookReviewRepository.findByUserEntityAndBookEntity(userEntity, bookEntity);
+        if (bookReviewCheckEntity != null) throw new ReviewAlreadyExists("You gave review already, you can update your review!");
+
         BookReviewEntity bookReviewEntity = new BookReviewEntity();
 
         bookReviewEntity.setBookEntity(bookEntity);
@@ -79,40 +88,32 @@ public class BookReviewServiceImplementation implements BookReviewService {
     public void deleteReview(Long bookId, Long reviewId) throws Exception {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
-        String currentUserRole = user.get().getRole();
-        Long currentUserId = user.get().getUserId();
+        Long userId = user.get().getUserId();
 
-        BookReviewEntity bookReview = bookReviewRepository.findByReviewId(reviewId);
-        Long userId = bookReview.getUserEntity().getUserId();
+        BookEntity bookEntity = bookRepository.findByBookId(bookId);
+        UserEntity userEntity = userRepository.findByUserId(userId);
 
-        if (!currentUserId.equals(userId) && currentUserRole.equals("CUSTOMER")) {
-            throw new Exception("You are not authorized to access this!");
-        }
+        if (bookEntity == null) throw new BookIdNotFoundException("Book Id does not exists!");
 
-        if (!bookReview.getBookEntity().getBookId().equals(bookId)) {
-            throw new Exception("Book id or Review id is wrong!");
-        }
-
+        BookReviewEntity bookReview = bookReviewRepository.findByReviewIdAndBookEntityAndUserEntity(reviewId, bookEntity, userEntity);
+        if (bookReview == null) throw new ReviewIdNotFoundException("This review does not exists!");
         bookReviewRepository.delete(bookReview);
-
     }
 
     public BookReviewDto updateReview(Long bookId, Long reviewId, BookReviewDto bookReviewDto) throws Exception {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
-        String currentUserRole = user.get().getRole();
-        Long currentUserId = user.get().getUserId();
+        Long userId = user.get().getUserId();
 
-        BookReviewEntity bookReview = bookReviewRepository.findByReviewId(reviewId);
-        Long userId = bookReview.getUserEntity().getUserId();
 
-        if (!currentUserId.equals(userId) && currentUserRole.equals("CUSTOMER")) {
-            throw new Exception("You are not authorized to access this!");
-        }
+        BookEntity bookEntity = bookRepository.findByBookId(bookId);
+        UserEntity userEntity = userRepository.findByUserId(userId);
 
-        if (!bookReview.getBookEntity().getBookId().equals(bookId)) {
-            throw new Exception("Book id or Review id is wrong!");
-        }
+        if (bookEntity == null) throw new BookIdNotFoundException("Book Id does not exists!");
+
+
+        BookReviewEntity bookReview = bookReviewRepository.findByReviewIdAndBookEntityAndUserEntity(reviewId, bookEntity, userEntity);
+        if (bookReview == null) throw new ReviewIdNotFoundException("This review does not exists!");
 
         bookReview.setRating(bookReviewDto.getRating());
         bookReview.setReview(bookReviewDto.getReview());
