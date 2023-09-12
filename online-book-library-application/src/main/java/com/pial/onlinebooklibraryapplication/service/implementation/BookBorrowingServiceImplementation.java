@@ -153,7 +153,7 @@ public class BookBorrowingServiceImplementation implements BookBorrowingService 
         }
         UserEntity userEntity = userRepository.findByUserId(userId);
         List<BookBorrowingEntity> bookBorrowings = bookBorrowRepository.findAllByUserEntity(userEntity);
-        if (bookBorrowings.isEmpty()) throw new BookNotBorrowedException("No book borrowed by this user!");
+//        if (bookBorrowings.isEmpty()) throw new BookNotBorrowedException("No book borrowed by this user!");
         List<BookBorrowingInfoDto> bookBorrowingInfoList = bookBorrowings.stream()
                 .map(bookBorrowingEntity -> BookBorrowingInfoDto.builder()
                         .borrowId(bookBorrowingEntity.getBorrowId())

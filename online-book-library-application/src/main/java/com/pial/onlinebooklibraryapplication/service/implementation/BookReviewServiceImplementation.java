@@ -76,6 +76,7 @@ public class BookReviewServiceImplementation implements BookReviewService {
 
     public List<BookReviewDto> allBookReview(Long bookId) throws Exception {
         BookEntity bookEntity = bookRepository.findByBookId(bookId);
+        if (bookEntity == null || bookEntity.isDeleted()) throw new BookIdNotFoundException("Book does not exists!");
         ModelMapper modelMapper = new ModelMapper();
         List<BookReviewEntity> bookReviews = bookReviewRepository.findAllByBookEntity(bookEntity);
         List<BookReviewDto> bookReviewDtos = bookReviews.stream()
@@ -93,7 +94,7 @@ public class BookReviewServiceImplementation implements BookReviewService {
         BookEntity bookEntity = bookRepository.findByBookId(bookId);
         UserEntity userEntity = userRepository.findByUserId(userId);
 
-        if (bookEntity == null) throw new BookIdNotFoundException("Book Id does not exists!");
+        if (bookEntity == null || bookEntity.isDeleted()) throw new BookIdNotFoundException("Book Id does not exists!");
 
         BookReviewEntity bookReview = bookReviewRepository.findByReviewIdAndBookEntityAndUserEntity(reviewId, bookEntity, userEntity);
         if (bookReview == null) throw new ReviewIdNotFoundException("This review does not exists!");
@@ -109,7 +110,7 @@ public class BookReviewServiceImplementation implements BookReviewService {
         BookEntity bookEntity = bookRepository.findByBookId(bookId);
         UserEntity userEntity = userRepository.findByUserId(userId);
 
-        if (bookEntity == null) throw new BookIdNotFoundException("Book Id does not exists!");
+        if (bookEntity == null || bookEntity.isDeleted()) throw new BookIdNotFoundException("Book Id does not exists!");
 
 
         BookReviewEntity bookReview = bookReviewRepository.findByReviewIdAndBookEntityAndUserEntity(reviewId, bookEntity, userEntity);

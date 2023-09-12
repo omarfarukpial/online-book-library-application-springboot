@@ -35,10 +35,10 @@ public class UserServiceImplementation implements UserService, UserDetailsServic
 
     @Override
     public UserDto createUser(UserDto user) throws Exception {
-        if ( user.getEmail() == null || user.getPassword() == null || user.getRole() == null ||
-                user.getFirstName() == null || user.getLastName() == null || user.getAddress() == null ) {
-            throw new FormException("Please provide all the field of registration form!");
-        }
+//        if ( user.getEmail() == null || user.getPassword() == null || user.getRole() == null ||
+//                user.getFirstName() == null || user.getLastName() == null || user.getAddress() == null ) {
+//            throw new FormException("Please provide all the field of registration form!");
+//        }
 
         if(userRepository.findByEmail(user.getEmail()).isPresent())
             throw new EmailAlreadyExistsException("Email already exists!");
