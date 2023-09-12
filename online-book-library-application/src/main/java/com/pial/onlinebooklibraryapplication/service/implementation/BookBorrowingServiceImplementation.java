@@ -1,6 +1,7 @@
 package com.pial.onlinebooklibraryapplication.service.implementation;
 
 
+import com.pial.onlinebooklibraryapplication.constants.AppConstants;
 import com.pial.onlinebooklibraryapplication.dto.BookBorrowingDto;
 import com.pial.onlinebooklibraryapplication.dto.BookBorrowingInfoDto;
 import com.pial.onlinebooklibraryapplication.dto.BookDto;
@@ -9,10 +10,7 @@ import com.pial.onlinebooklibraryapplication.entity.BookBorrowingEntity;
 import com.pial.onlinebooklibraryapplication.entity.BookEntity;
 import com.pial.onlinebooklibraryapplication.entity.BookReserveEntity;
 import com.pial.onlinebooklibraryapplication.entity.UserEntity;
-import com.pial.onlinebooklibraryapplication.exception.BookIdNotFoundException;
-import com.pial.onlinebooklibraryapplication.exception.BookNotBorrowedException;
-import com.pial.onlinebooklibraryapplication.exception.NotAuthorizedException;
-import com.pial.onlinebooklibraryapplication.exception.UserIdNotFoundException;
+import com.pial.onlinebooklibraryapplication.exception.*;
 import com.pial.onlinebooklibraryapplication.repository.BookBorrowRepository;
 import com.pial.onlinebooklibraryapplication.repository.BookRepository;
 import com.pial.onlinebooklibraryapplication.repository.BookReserveRepository;
@@ -35,126 +33,73 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class BookBorrowingServiceImplementation implements BookBorrowingService {
-    @Autowired
-    private BookRepository bookRepository;
+    private final BookRepository bookRepository;
+    private final UserRepository userRepository;
+    private final BookBorrowRepository bookBorrowRepository;
+    private final BookReserveRepository bookReserveRepository;
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private BookBorrowRepository bookBorrowRepository;
-
-    @Autowired
-    private BookReserveRepository bookReserveRepository;
-
+    public BookBorrowingServiceImplementation(BookRepository bookRepository, UserRepository userRepository, BookBorrowRepository bookBorrowRepository, BookReserveRepository bookReserveRepository) {
+        this.bookRepository = bookRepository;
+        this.userRepository = userRepository;
+        this.bookBorrowRepository = bookBorrowRepository;
+        this.bookReserveRepository = bookReserveRepository;
+    }
     public BookBorrowingDto bookBorrowing(Long bookId) throws Exception {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
-        Long userId = user.get().getUserId();
-
-        UserEntity userEntity = userRepository.findByUserId(userId);
-        BookEntity bookEntity = bookRepository.findByBookId(bookId);
-
-        if (bookEntity == null || bookEntity.isDeleted()) throw new BookIdNotFoundException("Book does not exits!");
-        if (Objects.equals(bookEntity.getStatus(), "BORROWED")) throw new Exception("Currently unavailable, but you can reserve this book!");
-
-        ModelMapper modelMapper = new ModelMapper();
+        UserEntity userEntity = getCurrentUser();
+        BookEntity bookEntity = getBookById(bookId);
+        if (Objects.equals(bookEntity.getStatus(), AppConstants.STATUS_BORROWED))
+            throw new BookUnavailableException(AppConstants.BOOK_UNAVAILABLE);
         BookBorrowingEntity bookBorrowingEntity = new BookBorrowingEntity();
         bookBorrowingEntity.setBookEntity(bookEntity);
         bookBorrowingEntity.setUserEntity(userEntity);
         bookBorrowingEntity.setBorrowDate(LocalDate.now());
         bookBorrowingEntity.setDueDate(LocalDate.now().plusDays(14));
-        bookEntity.setStatus("BORROWED");
-
-
+        bookEntity.setStatus(AppConstants.STATUS_BORROWED);
         BookBorrowingEntity storeBorrowDetails = bookBorrowRepository.save(bookBorrowingEntity);
-
-        return modelMapper.map(storeBorrowDetails, BookBorrowingDto.class);
+        return new ModelMapper().map(storeBorrowDetails, BookBorrowingDto.class);
     }
-
-
     public BookBorrowingDto bookReturning(Long bookId) throws Exception{
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
-        Long userId = user.get().getUserId();
-
-        UserEntity userEntity = userRepository.findByUserId(userId);
-        BookEntity bookEntity = bookRepository.findByBookId(bookId);
-
-        if (bookEntity == null || bookEntity.isDeleted()) throw new BookIdNotFoundException("Book does not exits!");
-
-        BookBorrowingEntity bookBorrowingEntity = bookBorrowRepository.findByUserEntityAndBookEntityAndReturnDateIsNull(userEntity,bookEntity);
-        if (bookBorrowingEntity == null) throw new BookNotBorrowedException("You did not currently borrowing this book!");
-        ModelMapper modelMapper = new ModelMapper();
+        UserEntity userEntity = getCurrentUser();
+        BookEntity bookEntity = getBookById(bookId);
+        BookBorrowingEntity bookBorrowingEntity = bookBorrowRepository
+                .findByUserEntityAndBookEntityAndReturnDateIsNull(userEntity,bookEntity)
+                .orElseThrow(()-> new BookNotBorrowedException(AppConstants.BOOK_NOTBORROWED));
+        bookEntity.setStatus(AppConstants.STATUS_AVAILABLE);
         bookBorrowingEntity.setReturnDate(LocalDate.now());
-        bookEntity.setStatus("AVAILABLE");
-
-        List<BookReserveEntity> bookReserveEntity = bookReserveRepository.findAllByBookEntityAndStatus(bookEntity,"PENDING");
-        if(!bookReserveEntity.isEmpty()) {
-            for (BookReserveEntity reserveEntity : bookReserveEntity) {
-                reserveEntity.setStatus("DONE");
-            }
-        }
-
+        bookReserveRepository.findAllByBookEntityAndStatus(bookEntity, AppConstants.STATUS_PENDING)
+                .forEach(reserveEntity -> reserveEntity.setStatus(AppConstants.STATUS_AVAILABLE));
         BookBorrowingEntity storeReturnDetails = bookBorrowRepository.save(bookBorrowingEntity);
-        return modelMapper.map(storeReturnDetails, BookBorrowingDto.class);
+        return new ModelMapper().map(storeReturnDetails, BookBorrowingDto.class);
     }
-
-    public List<BookEntity> getAllBookByUser(Long userId) throws NotAuthorizedException, UserIdNotFoundException {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
-        String currentUserRole = user.get().getRole();
-        Long currentUserId = user.get().getUserId();
-        if (!currentUserId.equals(userId) && currentUserRole.equals("CUSTOMER")) {
-            throw new NotAuthorizedException("You are not authorized to access this!");
+    public List<BookDto> getAllBookByUser(Long userId) throws Exception {
+        if (!getCurrentUser().getUserId().equals(userId) && getCurrentUser().getRole().equals(AppConstants.ROLE_CUSTOMER)) {
+            throw new NotAuthorizedException(AppConstants.USER_UNAUTHORIZED);
         }
-        UserEntity userEntity = userRepository.findByUserId(userId);
-        if (userEntity == null) throw new UserIdNotFoundException("User Id does not exists!");
-        List<BookBorrowingEntity> bookBorrowings = bookBorrowRepository.findAllByUserEntity(userEntity);
-
-        List<BookEntity> books = bookBorrowings.stream()
-                .map(BookBorrowingEntity::getBookEntity)
-                .collect(Collectors.toList());
-
-        return books;
-
+        UserEntity userEntity = userRepository.findByUserId(userId)
+                .orElseThrow(()-> new UserIdNotFoundException(AppConstants.USER_NOTFOUND));
+        return bookBorrowRepository.findAllByUserEntity(userEntity).stream()
+                .map(bookBorrowingEntity -> new ModelMapper().map(bookBorrowingEntity.getBookEntity(), BookDto.class))
+                .toList();
     }
-
-    public List<BookEntity> getAllBorrowedBookByUser(Long userId) throws NotAuthorizedException,UserIdNotFoundException {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
-        String currentUserRole = user.get().getRole();
-        Long currentUserId = user.get().getUserId();
-        if (!currentUserId.equals(userId) && currentUserRole.equals("CUSTOMER")) {
-            throw new NotAuthorizedException("You are not authorized to access this!");
+    public List<BookDto> getAllBorrowedBookByUser(Long userId) throws Exception {
+        if (!getCurrentUser().getUserId().equals(userId) && getCurrentUser().getRole().equals(AppConstants.ROLE_CUSTOMER)) {
+            throw new NotAuthorizedException(AppConstants.USER_UNAUTHORIZED);
         }
-        UserEntity userEntity = userRepository.findByUserId(userId);
-        if (userEntity == null) throw new UserIdNotFoundException("User Id does not exists!");
-
+        UserEntity userEntity = userRepository.findByUserId(userId)
+                .orElseThrow(()-> new UserIdNotFoundException(AppConstants.USER_NOTFOUND));
         List<BookBorrowingEntity> bookBorrowings = bookBorrowRepository.findAllByUserEntityAndReturnDateIsNull(userEntity);
-
-        List<BookEntity> books = bookBorrowings.stream()
-                .map(BookBorrowingEntity::getBookEntity)
+        return bookBorrowings.stream()
+                .map(bookBorrowingEntity -> new ModelMapper().map(bookBorrowingEntity.getBookEntity(), BookDto.class))
                 .collect(Collectors.toList());
-
-        return books;
-
     }
-
     public List<BookBorrowingInfoDto> getUserAllHistory(Long userId) throws Exception {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
-        String currentUserRole = user.get().getRole();
-        Long currentUserId = user.get().getUserId();
-        UserEntity checkUser = userRepository.findByUserId(userId);
-        if (checkUser == null) throw new UserIdNotFoundException("User id does not exists!");
-        if (!currentUserId.equals(userId) && currentUserRole.equals("CUSTOMER")) {
-            throw new NotAuthorizedException("You are not authorized to access this!");
+        if (!getCurrentUser().getUserId().equals(userId) && getCurrentUser().getRole().equals(AppConstants.ROLE_CUSTOMER)) {
+            throw new NotAuthorizedException(AppConstants.USER_UNAUTHORIZED);
         }
-        UserEntity userEntity = userRepository.findByUserId(userId);
+        UserEntity userEntity = userRepository.findByUserId(userId)
+                .orElseThrow(()->new UserIdNotFoundException(AppConstants.USER_NOTFOUND));
         List<BookBorrowingEntity> bookBorrowings = bookBorrowRepository.findAllByUserEntity(userEntity);
-//        if (bookBorrowings.isEmpty()) throw new BookNotBorrowedException("No book borrowed by this user!");
-        List<BookBorrowingInfoDto> bookBorrowingInfoList = bookBorrowings.stream()
+        return bookBorrowings.stream()
                 .map(bookBorrowingEntity -> BookBorrowingInfoDto.builder()
                         .borrowId(bookBorrowingEntity.getBorrowId())
                         .bookEntity(bookBorrowingEntity.getBookEntity())
@@ -164,12 +109,15 @@ public class BookBorrowingServiceImplementation implements BookBorrowingService 
                         .build()
                 )
                 .collect(Collectors.toList());
-        return bookBorrowingInfoList;
     }
-
-
-
-
-
-
+    private UserEntity getCurrentUser() throws Exception {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new Exception(AppConstants.TOKEN_INVALID));
+    }
+    private BookEntity getBookById(Long bookId) throws Exception {
+        return bookRepository.findByBookId(bookId)
+                .filter(book -> !book.isDeleted())
+                .orElseThrow(() -> new BookIdNotFoundException(AppConstants.BOOK_NOTFOUND));
+    }
 }

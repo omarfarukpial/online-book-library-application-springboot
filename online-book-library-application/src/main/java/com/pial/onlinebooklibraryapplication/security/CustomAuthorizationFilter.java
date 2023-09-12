@@ -29,12 +29,17 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
         if(header==null||!header.startsWith(AppConstants.TOKEN_PREFIX)){
             filterChain.doFilter(request,response);
         }else {
-            UsernamePasswordAuthenticationToken authenticationToken = getAuthenticationToken(header);
+            UsernamePasswordAuthenticationToken authenticationToken = null;
+            try {
+                authenticationToken = getAuthenticationToken(header);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
             SecurityContextHolder.getContext().setAuthentication(authenticationToken);
             filterChain.doFilter(request,response);
         }
     }
-    public UsernamePasswordAuthenticationToken getAuthenticationToken(String header) {
+    public UsernamePasswordAuthenticationToken getAuthenticationToken(String header) throws Exception {
         if(header != null){
             String token = header.replace(AppConstants.TOKEN_PREFIX,"");
             String user = JWTUtils.hasTokenExpired(token)? null : JWTUtils.extractUser(token);

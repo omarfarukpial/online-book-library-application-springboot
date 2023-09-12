@@ -97,7 +97,7 @@ public class BookController {
     @GetMapping("/users/{userId}/books")
     public ResponseEntity<?> retriveBooks(@PathVariable Long userId) {
         try {
-            List<BookEntity> allBookByUser = bookBorrowingServiceImplementation.getAllBookByUser(userId);
+            List<BookDto> allBookByUser = bookBorrowingServiceImplementation.getAllBookByUser(userId);
             return new ResponseEntity<>(allBookByUser, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
@@ -107,7 +107,7 @@ public class BookController {
     @GetMapping("/users/{userId}/borrowed-books")
     public ResponseEntity<?> retriveBorrowedBooks(@PathVariable Long userId) {
         try {
-            List<BookEntity> allBookByUser = bookBorrowingServiceImplementation.getAllBorrowedBookByUser(userId);
+            List<BookDto> allBookByUser = bookBorrowingServiceImplementation.getAllBorrowedBookByUser(userId);
             return new ResponseEntity<>(allBookByUser, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);

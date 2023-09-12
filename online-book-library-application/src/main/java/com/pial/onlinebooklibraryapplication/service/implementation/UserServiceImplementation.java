@@ -26,24 +26,16 @@ import java.util.ArrayList;
 @Transactional
 
 public class UserServiceImplementation implements UserService, UserDetailsService {
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private BCryptPasswordEncoder bCryptPasswordEncoder;
-
-
+    private final UserRepository userRepository;
+    private final BCryptPasswordEncoder bCryptPasswordEncoder;
+    public UserServiceImplementation(UserRepository userRepository, BCryptPasswordEncoder bCryptPasswordEncoder) {
+        this.userRepository = userRepository;
+        this.bCryptPasswordEncoder = bCryptPasswordEncoder;
+    }
     @Override
     public UserDto createUser(UserDto user) throws Exception {
-//        if ( user.getEmail() == null || user.getPassword() == null || user.getRole() == null ||
-//                user.getFirstName() == null || user.getLastName() == null || user.getAddress() == null ) {
-//            throw new FormException("Please provide all the field of registration form!");
-//        }
-
         if(userRepository.findByEmail(user.getEmail()).isPresent())
-            throw new EmailAlreadyExistsException("Email already exists!");
-
-        ModelMapper modelMapper = new ModelMapper();
+            throw new EmailAlreadyExistsException(AppConstants.EMAIL_DUPLICATE);
         UserEntity userEntity = new UserEntity();
         userEntity.setFirstName(user.getFirstName());
         userEntity.setLastName(user.getLastName());
@@ -52,36 +44,29 @@ public class UserServiceImplementation implements UserService, UserDetailsServic
         userEntity.setPassword(bCryptPasswordEncoder.encode(user.getPassword()));
         userEntity.setRole(user.getRole());
         UserEntity storedUserDetails = userRepository.save(userEntity);
-        UserDto returnedValue = modelMapper.map(storedUserDetails,UserDto.class);
+        UserDto returnedValue = new ModelMapper().map(storedUserDetails,UserDto.class);
         String accessToken = JWTUtils.generateToken(userEntity.getEmail());
         returnedValue.setAccessToken(AppConstants.TOKEN_PREFIX + accessToken);
         return returnedValue;
     }
-
-
-
-
     @Override
-    public UserDto getUser(String email) {
-        UserEntity userEntity = userRepository.findByEmail(email).get();
-        if(userEntity == null) throw new UsernameNotFoundException("No record found");
-        UserDto returnValue = new UserDto();
-        BeanUtils.copyProperties(userEntity,returnValue);
-        return returnValue;
+    public UserDto getUser(String email) throws UsernameNotFoundException {
+        UserEntity userEntity = userRepository
+                .findByEmail(email)
+                .orElseThrow(()->new UsernameNotFoundException(AppConstants.USER_NOTFOUND));
+        return new ModelMapper().map(userEntity, UserDto.class);
     }
-
     @Override
     public UserDto getUserByUserId(Long userId) throws Exception {
-        UserDto returnValue = new UserDto();
-        UserEntity userEntity = userRepository.findByUserId(userId);
-        if (userEntity == null) throw new UserIdNotFoundException("User Id does not exists!");
-        BeanUtils.copyProperties(userEntity,returnValue);
-        return returnValue;
+        UserEntity userEntity = userRepository
+                .findByUserId(userId)
+                .orElseThrow(()->new UserIdNotFoundException(AppConstants.USER_NOTFOUND));
+        return new ModelMapper().map(userEntity, UserDto.class);
     }
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        UserEntity userEntity = userRepository.findByEmail(email).get();
-        if(userEntity==null) throw new UsernameNotFoundException(email);
+        UserEntity userEntity = userRepository.findByEmail(email)
+                .orElseThrow(()-> new UsernameNotFoundException(AppConstants.USER_NOTFOUND));
         return new User(userEntity.getEmail(),userEntity.getPassword(),
                 true,true,true,true,new ArrayList<>());
     }

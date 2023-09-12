@@ -11,7 +11,7 @@ public interface BookService {
     BookDto createBook(BookDto bookDto) throws Exception;
     BookDto updateBook(BookDto bookDto) throws Exception;
     void deleteBook(BookDto bookDto) throws Exception;
-     List<BookDto> getAllBook();
+     List<BookDto> getAllBook() throws Exception;
 
 
 }

@@ -7,13 +7,14 @@ import com.pial.onlinebooklibraryapplication.entity.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface BookReviewRepository extends JpaRepository<BookReviewEntity, Long> {
 
     List<BookReviewEntity> findAllByBookEntity(BookEntity bookEntity) throws Exception;
 
 
-    BookReviewEntity findByUserEntityAndBookEntity(UserEntity userEntity, BookEntity bookEntity);
+    Optional<BookReviewEntity> findByUserEntityAndBookEntity(UserEntity userEntity, BookEntity bookEntity);
 
-    BookReviewEntity findByReviewIdAndBookEntityAndUserEntity(Long reviewId, BookEntity bookEntity, UserEntity userEntity);
+    Optional <BookReviewEntity> findByReviewIdAndBookEntityAndUserEntity(Long reviewId, BookEntity bookEntity, UserEntity userEntity);
 }

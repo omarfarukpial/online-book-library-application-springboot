@@ -9,6 +9,7 @@ import com.pial.onlinebooklibraryapplication.entity.BookBorrowingEntity;
 import com.pial.onlinebooklibraryapplication.entity.BookEntity;
 import com.pial.onlinebooklibraryapplication.entity.UserEntity;
 import com.pial.onlinebooklibraryapplication.exception.BookIdNotFoundException;
+import com.pial.onlinebooklibraryapplication.exception.BookUnavailableException;
 import com.pial.onlinebooklibraryapplication.repository.BookRepository;
 import com.pial.onlinebooklibraryapplication.service.BookService;
 import com.pial.onlinebooklibraryapplication.utils.JWTUtils;
@@ -32,29 +33,23 @@ import java.util.stream.Collectors;
 @Transactional
 public class BookServiceImplementation implements BookService {
 
-    @Autowired
-    private BookRepository bookRepository;
-
-
-
-    public BookDto createBook(BookDto book) {
-        ModelMapper modelMapper = new ModelMapper();
-        BookEntity bookEntity = new BookEntity();
-
-        bookEntity.setTitle(book.getTitle());
-        bookEntity.setAuthor(book.getAuthor());
-        bookEntity.setStatus("AVAILABLE");
-        bookEntity.setDeleted(false);
-
-        BookEntity storedBookDetails = bookRepository.save(bookEntity);
-        return modelMapper.map(storedBookDetails,BookDto.class);
+    private final BookRepository bookRepository;
+    public BookServiceImplementation(BookRepository bookRepository) {
+        this.bookRepository = bookRepository;
     }
 
-    public List<BookDto> getAllBook(){
-
+    public BookDto createBook(BookDto book) {
+        BookEntity bookEntity = new BookEntity();
+        bookEntity.setTitle(book.getTitle());
+        bookEntity.setAuthor(book.getAuthor());
+        bookEntity.setStatus(AppConstants.STATUS_AVAILABLE);
+        bookEntity.setDeleted(false);
+        BookEntity storedBookDetails = bookRepository.save(bookEntity);
+        return new ModelMapper().map(storedBookDetails,BookDto.class);
+    }
+    public List<BookDto> getAllBook() throws Exception{
         List<BookEntity> allBooks = bookRepository.findAllByDeletedFalse();
-
-        List<BookDto> bookDtoList = allBooks.stream()
+         return allBooks.stream()
                 .map(bookEntity -> BookDto.builder()
                         .bookId(bookEntity.getBookId())
                         .title(bookEntity.getTitle())
@@ -63,37 +58,23 @@ public class BookServiceImplementation implements BookService {
                         .build()
                 )
                 .collect(Collectors.toList());
-
-
-        return bookDtoList;
     }
-
     public void deleteBook(BookDto bookDto) throws Exception {
-        Optional<BookEntity> optionalBook = bookRepository.findByBookIdAndDeletedFalse(bookDto.getBookId());
-
-        if (optionalBook.isPresent()) {
-            BookEntity bookEntity = optionalBook.get();
-            if(bookEntity.getStatus().equals("BORROWED")) throw new Exception("This book is in borrowed state, you should not delete it!");
-            bookEntity.setDeleted(true);
-            bookRepository.save(bookEntity);
-        } else {
-            throw new Exception("Book does not exists!");
-        }
+        BookEntity bookEntity = bookRepository
+                .findByBookIdAndDeletedFalse(bookDto.getBookId())
+                .orElseThrow(()-> new BookIdNotFoundException(AppConstants.BOOK_NOTFOUND));
+        if(AppConstants.STATUS_BORROWED.equals(bookEntity.getStatus()))
+            throw new BookUnavailableException(AppConstants.BOOK_NOTDELETE);
+        bookEntity.setDeleted(true);
+        bookRepository.save(bookEntity);
     }
-
-    public BookDto updateBook(BookDto book) throws BookIdNotFoundException {
-
-        ModelMapper modelMapper = new ModelMapper();
-        BookEntity bookEntity = bookRepository.findByBookId(book.getBookId());
-
-        if (bookEntity == null || bookEntity.isDeleted())  throw new BookIdNotFoundException("Book does not exists!");;
-
-        bookEntity.setTitle(book.getTitle());
-        bookEntity.setAuthor(book.getAuthor());
+    public BookDto updateBook(BookDto bookDto) throws BookIdNotFoundException {
+        BookEntity bookEntity = bookRepository.findByBookId(bookDto.getBookId())
+                .filter(book -> !book.isDeleted())
+                .orElseThrow(() -> new BookIdNotFoundException(AppConstants.BOOK_NOTFOUND));
+        bookEntity.setTitle(bookDto.getTitle());
+        bookEntity.setAuthor(bookDto.getAuthor());
         BookEntity storedBookDetails = bookRepository.save(bookEntity);
-        return modelMapper.map(storedBookDetails,BookDto.class);
+        return new ModelMapper().map(storedBookDetails,BookDto.class);
     }
-
-
-
 }

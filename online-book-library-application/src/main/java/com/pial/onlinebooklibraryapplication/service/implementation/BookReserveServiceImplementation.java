@@ -1,5 +1,6 @@
 package com.pial.onlinebooklibraryapplication.service.implementation;
 
+import com.pial.onlinebooklibraryapplication.constants.AppConstants;
 import com.pial.onlinebooklibraryapplication.dto.BookBorrowingDto;
 import com.pial.onlinebooklibraryapplication.dto.BookReserveDto;
 import com.pial.onlinebooklibraryapplication.dto.BookReviewDto;
@@ -28,67 +29,58 @@ import java.util.Optional;
 @Service
 @Transactional
 public class BookReserveServiceImplementation implements BookReserveService {
-    @Autowired
-    private BookRepository bookRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private BookReserveRepository bookReserveRepository;
-
-    @Autowired
-    private BookBorrowRepository bookBorrowRepository;
+    private final BookRepository bookRepository;
+    private final UserRepository userRepository;
+    private final BookReserveRepository bookReserveRepository;
+    private final BookBorrowRepository bookBorrowRepository;
+    public BookReserveServiceImplementation(BookRepository bookRepository, UserRepository userRepository, BookReserveRepository bookReserveRepository, BookBorrowRepository bookBorrowRepository) {
+        this.bookRepository = bookRepository;
+        this.userRepository = userRepository;
+        this.bookReserveRepository = bookReserveRepository;
+        this.bookBorrowRepository = bookBorrowRepository;
+    }
 
     public BookReserveDto reserveBook(Long bookId) throws Exception{
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
-        Long userId = user.get().getUserId();
-
-        UserEntity userEntity = userRepository.findByUserId(userId);
-        BookEntity bookEntity = bookRepository.findByBookId(bookId);
-
-        if (bookEntity == null || bookEntity.isDeleted()) throw new BookIdNotFoundException("Book does not exits!");
-        if (Objects.equals(bookEntity.getStatus(), "AVAILABLE")) throw new BookAlreadyExistsException("This book is already available, you can borrow this!");
-
-        BookReserveEntity bookReserveCheckEntity = bookReserveRepository.findByUserEntityAndBookEntityAndStatus(userEntity,bookEntity, "PENDING");
-        if (bookReserveCheckEntity != null) throw new BookReservedBeforeException("You already reserved the book before!");
-
-        BookBorrowingEntity bookBorrowingCheckEntity = bookBorrowRepository.findByUserEntityAndBookEntityAndReturnDateIsNull(userEntity, bookEntity);
-        if (bookBorrowingCheckEntity != null) throw new BookNotBorrowedException("The book is borrowed by you, so you can not reserve it now!");
-
-        ModelMapper modelMapper = new ModelMapper();
+        UserEntity userEntity = getCurrentUser();
+        BookEntity bookEntity = getBookById(bookId);
+        if (AppConstants.STATUS_AVAILABLE.equals(bookEntity.getStatus()))
+            throw new BookAlreadyExistsException(AppConstants.BOOK_AVAILABLE);
+        if (bookReserveRepository
+                .findByUserEntityAndBookEntityAndStatus(userEntity, bookEntity, AppConstants.STATUS_PENDING)
+                .isPresent()
+        ) throw new BookReservedBeforeException(AppConstants.BOOK_RESERVEDBYYOU);
+        if (bookBorrowRepository
+                .findByUserEntityAndBookEntityAndReturnDateIsNull(userEntity, bookEntity)
+                .isPresent()
+        ) throw new BookNotBorrowedException(AppConstants.BOOK_BORROWEDBYYOU);
         BookReserveEntity bookReserveEntity = new BookReserveEntity();
         bookReserveEntity.setBookEntity(bookEntity);
         bookReserveEntity.setUserEntity(userEntity);
         bookReserveEntity.setReserveDate(LocalDate.now());
-        bookReserveEntity.setStatus("PENDING");
-
-
-        BookReserveEntity storeReserve = bookReserveRepository.save(bookReserveEntity);
-        return modelMapper.map(storeReserve, BookReserveDto.class);
-
+        bookReserveEntity.setStatus(AppConstants.STATUS_PENDING);
+        BookReserveEntity storeReserveDetails = bookReserveRepository.save(bookReserveEntity);
+        return new ModelMapper().map(storeReserveDetails, BookReserveDto.class);
     }
 
     public BookReserveDto cancelReserveBook(Long bookId) throws Exception {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Optional<UserEntity> user = userRepository.findByEmail(authentication.getName());
-        Long userId = user.get().getUserId();
-
-        UserEntity userEntity = userRepository.findByUserId(userId);
-        BookEntity bookEntity = bookRepository.findByBookId(bookId);
-
-        if (bookEntity == null || bookEntity.isDeleted()) throw new BookIdNotFoundException("Book does not exits!");
-
-        ModelMapper modelMapper = new ModelMapper();
-        BookReserveEntity bookCancelReserveEntity = bookReserveRepository.findByUserEntityAndBookEntityAndStatus(userEntity, bookEntity, "PENDING");
-        
-        if (bookCancelReserveEntity == null) throw new BookNotReservedException("No reservation found for this book and user!");
-
-        bookCancelReserveEntity.setStatus("CANCEL");
-
-        BookReserveEntity cancelReserve = bookReserveRepository.save(bookCancelReserveEntity);
-        return modelMapper.map(cancelReserve, BookReserveDto.class);
-
+        UserEntity userEntity = getCurrentUser();
+        BookEntity bookEntity = getBookById(bookId);
+        BookReserveEntity bookCancelReserveEntity = bookReserveRepository
+                .findByUserEntityAndBookEntityAndStatus(userEntity, bookEntity, AppConstants.STATUS_PENDING)
+                .orElseThrow(()-> new BookNotReservedException(AppConstants.BOOK_RESERVATION_NOTFOUND));
+        bookCancelReserveEntity.setStatus(AppConstants.STATUS_CANCEL);
+        return new ModelMapper().map(bookCancelReserveEntity, BookReserveDto.class);
     }
+
+    private UserEntity getCurrentUser() throws Exception {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new Exception(AppConstants.TOKEN_INVALID));
+    }
+    private BookEntity getBookById(Long bookId) throws Exception {
+        return bookRepository.findByBookId(bookId)
+                .filter(book -> !book.isDeleted())
+                .orElseThrow(() -> new BookIdNotFoundException(AppConstants.BOOK_NOTFOUND));
+    }
+
 }

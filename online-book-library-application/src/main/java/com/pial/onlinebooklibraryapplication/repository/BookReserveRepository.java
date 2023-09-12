@@ -6,9 +6,10 @@ import com.pial.onlinebooklibraryapplication.entity.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface BookReserveRepository extends JpaRepository<BookReserveEntity, Long> {
 
     List<BookReserveEntity> findAllByBookEntityAndStatus(BookEntity bookEntity, String pending);
-    BookReserveEntity findByUserEntityAndBookEntityAndStatus(UserEntity userEntity, BookEntity bookEntity, String pending);
+    Optional<BookReserveEntity> findByUserEntityAndBookEntityAndStatus(UserEntity userEntity, BookEntity bookEntity, String pending);
 }
