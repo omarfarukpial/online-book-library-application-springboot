@@ -17,13 +17,11 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class BookReviewDto {
-
     private Long reviewId;
     private Long bookId;
     private Long userId;
     private Long rating;
     private String review;
     private LocalDate date;
-
-
+    private boolean deleted;
 }

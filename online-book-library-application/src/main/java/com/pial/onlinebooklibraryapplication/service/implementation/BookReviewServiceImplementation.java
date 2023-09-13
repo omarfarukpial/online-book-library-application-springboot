@@ -31,11 +31,9 @@ import java.util.stream.Collectors;
 @Transactional
 
 public class BookReviewServiceImplementation implements BookReviewService {
-
     private final UserRepository userRepository;
     private final BookRepository bookRepository;
     private final BookReviewRepository bookReviewRepository;
-
     public BookReviewServiceImplementation(UserRepository userRepository, BookRepository bookRepository, BookReviewRepository bookReviewRepository) {
         this.userRepository = userRepository;
         this.bookRepository = bookRepository;
@@ -59,7 +57,7 @@ public class BookReviewServiceImplementation implements BookReviewService {
     }
     public List<BookReviewDto> allBookReview(Long bookId) throws Exception {
         BookEntity bookEntity = getBookById(bookId);
-        List<BookReviewEntity> bookReviews = bookReviewRepository.findAllByBookEntity(bookEntity);
+        List<BookReviewEntity> bookReviews = bookReviewRepository.findAllByBookEntityAndDeletedFalse(bookEntity);
         return bookReviews.stream()
                 .map(reviewEntity -> new ModelMapper().map(reviewEntity, BookReviewDto.class))
                 .collect(Collectors.toList());
@@ -68,15 +66,16 @@ public class BookReviewServiceImplementation implements BookReviewService {
         UserEntity userEntity = getCurrentUser();
         BookEntity bookEntity = getBookById(bookId);
         BookReviewEntity bookReview = bookReviewRepository
-                .findByReviewIdAndBookEntityAndUserEntity(reviewId, bookEntity, userEntity)
+                .findByReviewIdAndBookEntityAndUserEntityAndDeletedFalse(reviewId, bookEntity, userEntity)
                 .orElseThrow(() -> new ReviewIdNotFoundException(AppConstants.BOOK_REVIEWED_NOTFOUND));
-        bookReviewRepository.delete(bookReview);
+        bookReview.setDeleted(true);
+        bookReviewRepository.save(bookReview);
     }
     public BookReviewDto updateReview(Long bookId, Long reviewId, BookReviewDto bookReviewDto) throws Exception {
         UserEntity userEntity = getCurrentUser();
         BookEntity bookEntity = getBookById(bookId);
         BookReviewEntity bookReview = bookReviewRepository
-                .findByReviewIdAndBookEntityAndUserEntity(reviewId, bookEntity, userEntity)
+                .findByReviewIdAndBookEntityAndUserEntityAndDeletedFalse(reviewId, bookEntity, userEntity)
                 .orElseThrow(() -> new ReviewIdNotFoundException(AppConstants.BOOK_REVIEWED_NOTFOUND));
         bookReview.setRating(bookReviewDto.getRating());
         bookReview.setReview(bookReviewDto.getReview());

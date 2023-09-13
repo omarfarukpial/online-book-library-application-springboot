@@ -13,8 +13,6 @@ import java.util.Random;
 
 @Component
 public class JWTUtils {
-
-
     private static final Random RANDOM = new SecureRandom();
     private static final String ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     public static Boolean hasTokenExpired(String token){
@@ -23,7 +21,6 @@ public class JWTUtils {
         Date today = new Date();
         return tokenExpirationDate.before(today);
     }
-
     public static String generateToken(String id){
         return Jwts.builder()
                 .setSubject(id)
@@ -31,26 +28,13 @@ public class JWTUtils {
                 .signWith(SignatureAlgorithm.HS256,AppConstants.TOKEN_SECRET)
                 .compact();
     }
-
-    public static String generateUserID(int length){
-        return generateRandomString(length);
-    }
-
-    public static String generateBookID(int length){
-        return generateRandomString(length);
-    }
-
     private static String generateRandomString(int length){
         StringBuilder returnValue = new StringBuilder(length);
         for (int i = 0;i<length;i++)
             returnValue.append(ALPHABET.charAt(RANDOM.nextInt(ALPHABET.length())));
         return new String(returnValue);
     }
-
     public static String extractUser(String token) {
         return Jwts.parser().setSigningKey(AppConstants.TOKEN_SECRET).parseClaimsJws(token).getBody().getSubject();
     }
-
-
-
 }

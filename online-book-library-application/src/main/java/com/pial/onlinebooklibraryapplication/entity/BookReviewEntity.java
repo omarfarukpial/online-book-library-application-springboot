@@ -25,13 +25,8 @@ public class BookReviewEntity {
     @ManyToOne
     @JoinColumn(name = "userId")
     private UserEntity userEntity;
-
     private Long rating;
-
     private String review;
-
     private LocalDate date;
-
-
-
+    private boolean deleted;
 }

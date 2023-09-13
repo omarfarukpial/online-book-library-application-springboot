@@ -47,10 +47,6 @@ public class GlobalExceptionHandler {
     public String handleEmailAlreadyExistsException(String MESSAGE) {
         return MESSAGE;
     }
-    @ExceptionHandler({FormException.class})
-    public String handleFormException(String MESSAGE) {
-        return MESSAGE;
-    }
 
     @ExceptionHandler({NotAuthorizedException.class})
     public String handleNotAuthorizedException(String MESSAGE) {

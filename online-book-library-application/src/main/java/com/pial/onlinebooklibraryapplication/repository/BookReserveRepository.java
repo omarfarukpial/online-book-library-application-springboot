@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface BookReserveRepository extends JpaRepository<BookReserveEntity, Long> {
-
     List<BookReserveEntity> findAllByBookEntityAndStatus(BookEntity bookEntity, String pending);
     Optional<BookReserveEntity> findByUserEntityAndBookEntityAndStatus(UserEntity userEntity, BookEntity bookEntity, String pending);
 }

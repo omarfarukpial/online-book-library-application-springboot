@@ -32,12 +32,10 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class BookServiceImplementation implements BookService {
-
     private final BookRepository bookRepository;
     public BookServiceImplementation(BookRepository bookRepository) {
         this.bookRepository = bookRepository;
     }
-
     public BookDto createBook(BookDto book) {
         BookEntity bookEntity = new BookEntity();
         bookEntity.setTitle(book.getTitle());
@@ -47,7 +45,7 @@ public class BookServiceImplementation implements BookService {
         BookEntity storedBookDetails = bookRepository.save(bookEntity);
         return new ModelMapper().map(storedBookDetails,BookDto.class);
     }
-    public List<BookDto> getAllBook() throws Exception{
+    public List <BookDto> getAllBook() throws Exception{
         List<BookEntity> allBooks = bookRepository.findAllByDeletedFalse();
          return allBooks.stream()
                 .map(bookEntity -> BookDto.builder()

@@ -10,11 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface BookReviewRepository extends JpaRepository<BookReviewEntity, Long> {
-
-    List<BookReviewEntity> findAllByBookEntity(BookEntity bookEntity) throws Exception;
-
-
     Optional<BookReviewEntity> findByUserEntityAndBookEntity(UserEntity userEntity, BookEntity bookEntity);
-
-    Optional <BookReviewEntity> findByReviewIdAndBookEntityAndUserEntity(Long reviewId, BookEntity bookEntity, UserEntity userEntity);
+    List<BookReviewEntity> findAllByBookEntityAndDeletedFalse(BookEntity bookEntity);
+    Optional<BookReviewEntity> findByReviewIdAndBookEntityAndUserEntityAndDeletedFalse(Long reviewId, BookEntity bookEntity, UserEntity userEntity);
 }

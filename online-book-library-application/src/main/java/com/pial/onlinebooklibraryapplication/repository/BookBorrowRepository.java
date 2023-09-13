@@ -9,11 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface BookBorrowRepository extends JpaRepository<BookBorrowingEntity, Long> {
-
     Optional<BookBorrowingEntity> findByUserEntityAndBookEntityAndReturnDateIsNull(UserEntity userEntity, BookEntity bookEntity);
-
-
     List<BookBorrowingEntity> findAllByUserEntity(UserEntity userEntity);
-
     List<BookBorrowingEntity> findAllByUserEntityAndReturnDateIsNull(UserEntity userEntity);
 }
